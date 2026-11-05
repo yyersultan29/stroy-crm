@@ -1,4 +1,4 @@
-import { Check, MoreHorizontal, SlidersHorizontal, X } from "lucide-react";
+import { Check, Pencil, Trash2, X } from "lucide-react";
 import { formatDateTime, getUser, statusLabel } from "../../data";
 import { Avatar, StatusBadge } from "../../components/common";
 import type { Crm } from "../workspace/useCrm";
@@ -47,16 +47,18 @@ export function TaskDrawer({ crm }: { crm: Crm }) {
                 <button
                   className="icon-button"
                   onClick={() => openTaskEdit(selectedTask)}
+                  aria-label="Редактировать задачу"
                   title="Редактировать задачу"
                 >
-                  <SlidersHorizontal size={18} />
+                  <Pencil size={18} />
                 </button>
                 <button
                   className="icon-button danger-text"
                   onClick={() => deleteTask(selectedTask)}
+                  aria-label="Удалить задачу"
                   title="Удалить задачу"
                 >
-                  <MoreHorizontal size={20} />
+                  <Trash2 size={18} />
                 </button>
               </div>
             )}
