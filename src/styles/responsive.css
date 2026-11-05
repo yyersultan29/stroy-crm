@@ -1,0 +1,239 @@
+@media (max-width: 1150px) {
+  .sidebar {
+    width: 212px;
+    min-width: 212px;
+  }
+  .workspace {
+    padding: 32px 27px 50px;
+  }
+  .topbar {
+    padding: 0 27px;
+  }
+  .task-table__head,
+  .task-row {
+    grid-template-columns:
+      minmax(210px, 2fr) minmax(95px, 1fr) minmax(92px, 1fr)
+      minmax(120px, 1fr) 52px 16px;
+    gap: 10px;
+  }
+  .task-table--compact .task-table__head,
+  .task-table--compact .task-row {
+    grid-template-columns:
+      minmax(210px, 2fr) minmax(92px, 1fr) minmax(120px, 1fr)
+      52px 16px;
+    gap: 10px;
+  }
+  .task-row__assignee > span:last-child {
+    max-width: 86px;
+  }
+  .metric {
+    padding: 23px 19px;
+  }
+}
+@media (max-width: 850px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    transform: translateX(-100%);
+    transition: transform 0.24s;
+    width: 246px;
+    min-width: 246px;
+  }
+  .sidebar--open {
+    transform: translateX(0);
+  }
+  .mobile-scrim.is-visible {
+    display: block;
+    z-index: 19;
+  }
+  .mobile-menu {
+    display: grid;
+    margin-right: 12px;
+  }
+  .topbar {
+    justify-content: flex-start;
+  }
+  .topbar__right {
+    margin-left: auto;
+  }
+  .workspace {
+    padding: 28px 24px 45px;
+  }
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .metric:nth-child(2):after {
+    display: none;
+  }
+  .metric:nth-child(-n + 2) {
+    border-bottom: 1px solid #edf0eb;
+  }
+  .task-table {
+    overflow-x: auto;
+  }
+  .task-table__head,
+  .task-row {
+    min-width: 780px;
+  }
+  .task-table--compact .task-table__head,
+  .task-table--compact .task-row {
+    min-width: 665px;
+  }
+}
+@media (max-width: 600px) {
+  .topbar {
+    height: 59px;
+    padding: 0 17px;
+  }
+  .breadcrumbs {
+    gap: 5px;
+    font-size: 10px;
+  }
+  .breadcrumbs > span,
+  .breadcrumbs > svg:first-of-type {
+    display: none;
+  }
+  .topbar__date,
+  .topbar__divider,
+  .topbar__right .icon-button {
+    display: none;
+  }
+  .topbar__right {
+    gap: 0;
+  }
+  .workspace {
+    padding: 27px 17px 45px;
+  }
+  .page-heading {
+    align-items: flex-start;
+    margin-bottom: 28px;
+  }
+  .page-heading h1 {
+    font-size: 27px;
+  }
+  .page-heading p {
+    max-width: 240px;
+    line-height: 1.5;
+  }
+  .page-heading__action {
+    width: 37px;
+    min-width: 37px;
+    padding: 0;
+    font-size: 0;
+    overflow: hidden;
+    gap: 0;
+  }
+  .page-heading__action svg {
+    min-width: 18px;
+  }
+  .metrics {
+    margin-bottom: 32px;
+  }
+  .metric {
+    padding: 17px;
+  }
+  .metric strong {
+    font-size: 29px;
+    margin: 8px 0 4px;
+  }
+  .metric > span {
+    font-size: 10px;
+  }
+  .metric small {
+    font-size: 8px;
+  }
+  .section-heading h2 {
+    font-size: 16px;
+  }
+  .section-heading p {
+    font-size: 10px;
+  }
+  .object-list__head,
+  .object-row {
+    grid-template-columns: minmax(180px, 1fr) 54px 18px;
+    gap: 9px;
+  }
+  .object-list__head span:nth-child(3),
+  .object-row__progress {
+    display: none;
+  }
+  .object-row {
+    min-height: 73px;
+    padding: 0 12px;
+  }
+  .object-list__head {
+    padding: 0 12px;
+  }
+  .object-row__identity {
+    gap: 9px;
+  }
+  .object-row__number {
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    font-size: 10px;
+  }
+  .object-row__identity strong {
+    font-size: 10.5px;
+  }
+  .object-row__identity small {
+    font-size: 8.5px;
+  }
+  .object-row__count {
+    font-size: 12px;
+  }
+  .object-row__count span {
+    display: block;
+    font-size: 8px;
+  }
+  .object-meta {
+    flex-wrap: wrap;
+    gap: 9px 15px;
+  }
+  .object-meta__actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .modal {
+    padding: 22px;
+  }
+  .drawer__content {
+    padding: 25px 23px;
+  }
+  .drawer__top {
+    padding: 0 22px;
+  }
+  .drawer__footer {
+    padding: 14px 21px;
+  }
+  .list-toolbar {
+    align-items: stretch;
+  }
+  .search {
+    min-width: 0;
+  }
+  .filter-control {
+    white-space: nowrap;
+  }
+  .filter-control svg:first-child {
+    display: none;
+  }
+  .list-toolbar--tasks .search {
+    width: 55%;
+  }
+  .list-toolbar--tasks .filter-control {
+    width: 44%;
+    justify-content: space-between;
+  }
+  .list-toolbar--tasks .filter-control select {
+    max-width: 95px;
+  }
+  .result-count {
+    display: none;
+  }
+}

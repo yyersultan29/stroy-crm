@@ -24,7 +24,13 @@ async function signIn(role) {
 try {
   await page.goto(baseUrl)
   await signIn('MANAGER')
+  await page.getByRole('button', { name: 'Новый объект' }).click()
+  assert.equal(await page.getByRole('dialog', { name: 'Форма объекта' }).count(), 1)
+  await page.getByRole('button', { name: 'Закрыть' }).click()
   await page.locator('.nav__item').filter({ hasText: 'Все задачи' }).click()
+  await page.getByRole('button', { name: 'Новая задача' }).click()
+  assert.equal(await page.getByRole('dialog', { name: 'Форма задачи' }).count(), 1)
+  await page.getByRole('button', { name: 'Закрыть' }).click()
   assert.ok(await page.locator('.task-row').count() >= 6)
   await page.locator('.task-row').filter({ has: page.locator('.status--review') }).first().click()
   assert.equal(await page.getByRole('button', { name: 'Принять задачу' }).count(), 1)
@@ -41,7 +47,7 @@ try {
   await page.locator('.task-row').filter({ has: page.locator('.status--revision') }).first().click()
   assert.equal(await page.getByRole('button', { name: 'Взять в работу' }).count(), 1)
   assert.deepEqual(errors, [])
-  console.log('Production UI checks passed: manager and executor login, task visibility, actions')
+  console.log('UI checks passed: login, forms, task visibility, actions')
 } finally {
   await browser.close()
 }
