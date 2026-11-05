@@ -1,0 +1,23 @@
+@media (max-width: 600px) {
+  .task-table { overflow: visible; }
+  .task-table__head { display: none; }
+  .task-row, .task-table--compact .task-row {
+    min-width: 0;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'title status' 'object object' 'assignee date';
+    column-gap: 10px;
+    row-gap: 9px;
+    padding: 15px 14px;
+  }
+  .task-row__title { grid-area: title; }
+  .task-row__title strong { font-size: 11px; }
+  .task-row__object { grid-area: object; padding-left: 42px; font-size: 9px; }
+  .task-row > .status { grid-area: status; }
+  .task-row__assignee { grid-area: assignee; padding-left: 42px; font-size: 9px; }
+  .task-row__date { grid-area: date; justify-self: end; }
+  .task-row__arrow { display: none; }
+  .task-table--compact .task-row { grid-template-areas: 'title status' 'assignee date'; }
+  .task-table--compact .task-row__assignee { padding-left: 42px; }
+  .task-row__assignee > span:last-child { max-width: none; }
+}
