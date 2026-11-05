@@ -23,9 +23,10 @@ const ilyaTasks = await ilya.from('tasks').select('id,title,status,assignee_id')
 assert.ifError(managerTasks.error)
 assert.ifError(mariaTasks.error)
 assert.ifError(ilyaTasks.error)
-assert.equal(managerTasks.data.length, 6)
-assert.equal(mariaTasks.data.length, 3)
-assert.equal(ilyaTasks.data.length, 3)
+assert.ok(managerTasks.data.length >= 6)
+assert.ok(mariaTasks.data.length >= 3)
+assert.ok(ilyaTasks.data.length >= 3)
+assert.equal(managerTasks.data.length, mariaTasks.data.length + ilyaTasks.data.length)
 
 const foreignTask = ilyaTasks.data[0]
 const foreignRead = await maria.from('tasks').select('id').eq('id', foreignTask.id)

@@ -6,3 +6,4 @@ dist
 *.tsbuildinfo
 .vercel
 deliverables/
+.DS_Store
