@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowDownRight, ArrowLeft, ArrowRight, Bell, Building2, Check, CheckCheck, ChevronDown, ChevronRight, CircleHelp, ClipboardList, Clock3, Filter, LayoutGrid, MapPin, Menu, MoreHorizontal, Plus, Search, SlidersHorizontal, X } from 'lucide-react'
-import { formatDate, formatDateTime, getUser, loadStore, statusLabel, statusOrder, users, type ObjectItem, type Status, type Store, type Task } from './data'
+import { formatDate, formatDateTime, getUser, loadStore, setUserDirectory, statusLabel, statusOrder, users, type ObjectItem, type Status, type Store, type Task } from './data'
+import { createObject, createTask, deleteObject as deleteRemoteObject, deleteTask as deleteRemoteTask, loadWorkspace, supabase, transitionTask, updateObject, updateTask } from './backend'
 
 type View = 'overview' | 'objects' | 'tasks' | 'my-tasks'
 type Modal = 'object' | 'task' | null
@@ -35,8 +36,49 @@ function App() {
   const [revisionComment, setRevisionComment] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const [sessionUserId, setSessionUserId] = useState<string | null>(null)
+  const [authChecked, setAuthChecked] = useState(!supabase)
+  const [dataReady, setDataReady] = useState(!supabase)
+  const [loadError, setLoadError] = useState('')
+  const [actionError, setActionError] = useState('')
 
-  useEffect(() => { localStorage.setItem('kontur-demo-v1', JSON.stringify(store)) }, [store])
+  useEffect(() => { if (!supabase) localStorage.setItem('kontur-demo-v1', JSON.stringify(store)) }, [store])
+  useEffect(() => {
+    if (!supabase) return
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) setLoadError(error.message)
+      setSessionUserId(data.session?.user.id ?? null)
+      setAuthChecked(true)
+    })
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSessionUserId(session?.user.id ?? null)
+      setAuthChecked(true)
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+  useEffect(() => {
+    if (!supabase || !sessionUserId) return
+    let cancelled = false
+    setDataReady(false)
+    loadWorkspace().then(({ store: nextStore, users: directory }) => {
+      if (cancelled) return
+      if (!directory.some(user => user.id === sessionUserId)) throw new Error('Для этого пользователя не назначена роль. Добавьте его в таблицу profiles.')
+      setUserDirectory(directory)
+      setStore(nextStore)
+      setCurrentUserId(sessionUserId)
+      setLoadError('')
+      setDataReady(true)
+    }).catch(error => { if (!cancelled) { setLoadError(error instanceof Error ? error.message : String(error)); setDataReady(true) } })
+    return () => { cancelled = true }
+  }, [sessionUserId])
+
+  async function refreshWorkspace() {
+    const { store: nextStore, users: directory } = await loadWorkspace()
+    setUserDirectory(directory)
+    setStore(nextStore)
+  }
+
+  function reportError(error: unknown) { setActionError(error instanceof Error ? error.message : String(error)) }
 
   const currentUser = getUser(currentUserId)
   const isManager = currentUser.role === 'manager'
@@ -73,47 +115,70 @@ function App() {
   function openObjectCreate() { setEditingObjectId(null); setObjectForm({ name: '', address: '' }); setModal('object') }
   function openObjectEdit(object: ObjectItem) { setEditingObjectId(object.id); setObjectForm({ name: object.name, address: object.address }); setMenuOpen(false); setModal('object') }
 
-  function saveObject(event: React.FormEvent) {
+  async function saveObject(event: React.FormEvent) {
     event.preventDefault()
     const name = objectForm.name.trim(); const address = objectForm.address.trim()
     if (!name || !address) return
-    if (editingObjectId) setStore(previous => ({ ...previous, objects: previous.objects.map(object => object.id === editingObjectId ? { ...object, name, address } : object) }))
-    else setStore(previous => ({ ...previous, objects: [{ id: crypto.randomUUID(), name, address, createdAt: new Date().toISOString() }, ...previous.objects] }))
-    setModal(null)
+    try {
+      if (supabase) {
+        if (editingObjectId) await updateObject(editingObjectId, { name, address })
+        else await createObject({ name, address })
+        await refreshWorkspace()
+      } else if (editingObjectId) setStore(previous => ({ ...previous, objects: previous.objects.map(object => object.id === editingObjectId ? { ...object, name, address } : object) }))
+      else setStore(previous => ({ ...previous, objects: [{ id: crypto.randomUUID(), name, address, createdAt: new Date().toISOString() }, ...previous.objects] }))
+      setModal(null)
+    } catch (error) { reportError(error) }
   }
 
-  function saveTask(event: React.FormEvent) {
+  async function saveTask(event: React.FormEvent) {
     event.preventDefault()
     const title = taskForm.title.trim(); const description = taskForm.description.trim()
     if (!title || !taskForm.objectId || !taskForm.assigneeId) return
-    if (editingTaskId) setStore(previous => ({ ...previous, tasks: previous.tasks.map(task => task.id === editingTaskId ? { ...task, title, description, objectId: taskForm.objectId, assigneeId: taskForm.assigneeId } : task) }))
-    else {
-      const now = new Date().toISOString()
-      const task: Task = { id: crypto.randomUUID(), title, description, objectId: taskForm.objectId, assigneeId: taskForm.assigneeId, authorId: currentUserId, status: 'new', createdAt: now, history: [{ id: crypto.randomUUID(), from: null, to: 'new', actorId: currentUserId, at: now }] }
-      setStore(previous => ({ ...previous, tasks: [task, ...previous.tasks] }))
-    }
-    setModal(null)
+    try {
+      if (supabase) {
+        if (editingTaskId) await updateTask(editingTaskId, { title, description, objectId: taskForm.objectId, assigneeId: taskForm.assigneeId })
+        else await createTask({ title, description, objectId: taskForm.objectId, assigneeId: taskForm.assigneeId, authorId: currentUserId })
+        await refreshWorkspace()
+      } else if (editingTaskId) setStore(previous => ({ ...previous, tasks: previous.tasks.map(task => task.id === editingTaskId ? { ...task, title, description, objectId: taskForm.objectId, assigneeId: taskForm.assigneeId } : task) }))
+      else {
+        const now = new Date().toISOString()
+        const task: Task = { id: crypto.randomUUID(), title, description, objectId: taskForm.objectId, assigneeId: taskForm.assigneeId, authorId: currentUserId, status: 'new', createdAt: now, history: [{ id: crypto.randomUUID(), from: null, to: 'new', actorId: currentUserId, at: now }] }
+        setStore(previous => ({ ...previous, tasks: [task, ...previous.tasks] }))
+      }
+      setModal(null)
+    } catch (error) { reportError(error) }
   }
 
-  function deleteTask(task: Task) {
+  async function deleteTask(task: Task) {
     if (!window.confirm(`Удалить задачу «${task.title}»?`)) return
-    setStore(previous => ({ ...previous, tasks: previous.tasks.filter(item => item.id !== task.id) }))
-    setSelectedTaskId(null)
+    try {
+      if (supabase) { await deleteRemoteTask(task.id); await refreshWorkspace() }
+      else setStore(previous => ({ ...previous, tasks: previous.tasks.filter(item => item.id !== task.id) }))
+      setSelectedTaskId(null)
+    } catch (error) { reportError(error) }
   }
 
-  function deleteObject(object: ObjectItem) {
+  async function deleteObject(object: ObjectItem) {
     if (!window.confirm(`Удалить объект «${object.name}» и все его задачи?`)) return
-    setStore(previous => ({ objects: previous.objects.filter(item => item.id !== object.id), tasks: previous.tasks.filter(task => task.objectId !== object.id) }))
-    setSelectedObjectId(null); setMenuOpen(false)
+    try {
+      if (supabase) { await deleteRemoteObject(object.id); await refreshWorkspace() }
+      else setStore(previous => ({ objects: previous.objects.filter(item => item.id !== object.id), tasks: previous.tasks.filter(task => task.objectId !== object.id) }))
+      setSelectedObjectId(null); setMenuOpen(false)
+    } catch (error) { reportError(error) }
   }
 
-  function transition(task: Task, to: Status) {
+  async function transition(task: Task, to: Status) {
     if (to === 'revision' && !revisionComment.trim()) return
-    const now = new Date().toISOString()
-    setStore(previous => ({ ...previous, tasks: previous.tasks.map(item => item.id === task.id ? {
-      ...item, status: to, history: [...item.history, { id: crypto.randomUUID(), from: item.status, to, actorId: currentUserId, at: now, ...(to === 'revision' ? { comment: revisionComment.trim() } : {}) }],
-    } : item) }))
-    setRevisionComment('')
+    try {
+      if (supabase) { await transitionTask(task.id, to, revisionComment.trim()); await refreshWorkspace() }
+      else {
+        const now = new Date().toISOString()
+        setStore(previous => ({ ...previous, tasks: previous.tasks.map(item => item.id === task.id ? {
+          ...item, status: to, history: [...item.history, { id: crypto.randomUUID(), from: item.status, to, actorId: currentUserId, at: now, ...(to === 'revision' ? { comment: revisionComment.trim() } : {}) }],
+        } : item) }))
+      }
+      setRevisionComment('')
+    } catch (error) { reportError(error) }
   }
 
   const transitions: { to: Status; label: string; primary?: boolean }[] = !selectedTask ? [] : isManager
@@ -125,7 +190,13 @@ function App() {
   const title = selectedObject ? selectedObject.name : view === 'overview' ? 'Обзор' : view === 'objects' ? 'Объекты' : view === 'my-tasks' ? 'Мои задачи' : 'Все задачи'
   const subtitle = selectedObject ? selectedObject.address : view === 'overview' ? 'Что происходит на ваших объектах' : view === 'objects' ? 'Все строительные объекты в одном месте' : 'Контроль выполнения и проверка работ'
 
+  if (supabase && !authChecked) return <div className="app-loading">Подключаемся к Контур…</div>
+  if (supabase && !sessionUserId) return <LoginScreen />
+  if (supabase && !dataReady) return <div className="app-loading">Загружаем рабочее пространство…</div>
+  if (supabase && loadError) return <div className="app-loading app-loading--error"><strong>Не удалось открыть рабочее пространство</strong><p>{loadError}</p><button className="button button--outline" onClick={() => supabase?.auth.signOut()}>Выйти</button></div>
+
   return <div className="app-shell">
+    {actionError && <div className="error-toast" role="alert"><span>{actionError}</span><button onClick={() => setActionError('')} aria-label="Закрыть ошибку"><X size={16} /></button></div>}
     <div className={`mobile-scrim ${mobileNavOpen ? 'is-visible' : ''}`} onClick={() => setMobileNavOpen(false)} />
     <aside className={`sidebar ${mobileNavOpen ? 'sidebar--open' : ''}`}>
       <div className="brand"><span className="brand__mark"><span /></span><span>контур<span className="brand__period">.</span></span></div>
@@ -142,7 +213,7 @@ function App() {
         <Avatar userId={currentUserId} />
         <div className="account__copy"><strong>{currentUser.name}</strong><span>{isManager ? 'Постановщик' : 'Исполнитель'}</span></div>
         <button className="account__switch" onClick={() => setMenuOpen(!menuOpen)} aria-label="Сменить пользователя" aria-expanded={menuOpen}><ChevronDown size={17} /></button>
-        {menuOpen && <div className="user-menu"><div className="user-menu__title">Просмотр роли</div>{users.map(user => <button key={user.id} onClick={() => { setCurrentUserId(user.id); setSelectedObjectId(null); setSelectedTaskId(null); setView('overview'); setMenuOpen(false); setMobileNavOpen(false) }}><Avatar userId={user.id} size="small" /><span><strong>{user.name}</strong><small>{user.role === 'manager' ? 'Постановщик' : 'Исполнитель'}</small></span>{user.id === currentUserId && <Check size={16} />}</button>)}</div>}
+        {menuOpen && <div className="user-menu">{supabase ? <><div className="user-menu__title">АККАУНТ</div><button onClick={() => { supabase?.auth.signOut(); setMenuOpen(false) }}>Выйти из системы</button></> : <><div className="user-menu__title">Просмотр роли</div>{users.map(user => <button key={user.id} onClick={() => { setCurrentUserId(user.id); setSelectedObjectId(null); setSelectedTaskId(null); setView('overview'); setMenuOpen(false); setMobileNavOpen(false) }}><Avatar userId={user.id} size="small" /><span><strong>{user.name}</strong><small>{user.role === 'manager' ? 'Постановщик' : 'Исполнитель'}</small></span>{user.id === currentUserId && <Check size={16} />}</button>)}</>}</div>}
       </div>
     </aside>
 
@@ -187,5 +258,23 @@ function TaskTable({ tasks, onSelect, store, showObject = true }: { tasks: Task[
 }
 
 function EmptyState({ title, text }: { title: string; text: string }) { return <div className="empty-state"><span><Clock3 size={23} /></span><strong>{title}</strong><p>{text}</p></div> }
+
+function LoginScreen() {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [pending, setPending] = useState(false)
+  const [error, setError] = useState('')
+
+  async function signIn(event: React.FormEvent) {
+    event.preventDefault()
+    if (!supabase) return
+    setPending(true); setError('')
+    const result = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+    if (result.error) setError(result.error.message === 'Invalid login credentials' ? 'Неверный email или пароль' : result.error.message)
+    setPending(false)
+  }
+
+  return <main className="login-screen"><section className="login-panel"><div className="login-brand"><span className="brand__mark"><span /></span><span>контур<span className="brand__period">.</span></span></div><div className="login-panel__middle"><div className="eyebrow">РАБОЧЕЕ ПРОСТРАНСТВО</div><h1>Объекты и задачи<br />под контролем.</h1><p>Войдите, чтобы продолжить работу с проектами.</p><form onSubmit={signIn}><label>Email<input type="email" autoComplete="username" value={email} onChange={event => setEmail(event.target.value)} placeholder="name@company.com" required /></label><label>Пароль<input type="password" autoComplete="current-password" value={password} onChange={event => setPassword(event.target.value)} placeholder="Введите пароль" required /></label>{error && <div className="login-error" role="alert">{error}</div>}<button className="button button--primary" type="submit" disabled={pending}>{pending ? 'Входим…' : 'Войти в систему'}<ArrowRight size={17} /></button></form></div><div className="login-panel__foot">Доступ выдается руководителем проекта</div></section><aside className="login-art"><div className="login-art__grid" /><div className="login-art__top">СИСТЕМА УПРАВЛЕНИЯ СТРОИТЕЛЬСТВОМ <span>01 / 03</span></div><div className="login-art__shape login-art__shape--one" /><div className="login-art__shape login-art__shape--two" /><div className="login-art__caption"><span>ПОРЯДОК В КАЖДОЙ ДЕТАЛИ</span><strong>От задачи<br />к результату.</strong></div></aside></main>
+}
 
 export default App

@@ -6,11 +6,13 @@ export type HistoryItem = { id: string; from: Status | null; to: Status; actorId
 export type Task = { id: string; title: string; description: string; objectId: string; assigneeId: string; authorId: string; status: Status; createdAt: string; history: HistoryItem[] }
 export type Store = { objects: ObjectItem[]; tasks: Task[] }
 
-export const users: User[] = [
+export let users: User[] = [
   { id: 'u1', name: 'Александр Морозов', initials: 'АМ', role: 'manager', color: 'sand' },
   { id: 'u2', name: 'Мария Ким', initials: 'МК', role: 'executor', color: 'lavender' },
   { id: 'u3', name: 'Илья Соколов', initials: 'ИС', role: 'executor', color: 'mint' },
 ]
+
+export function setUserDirectory(directory: User[]) { users = directory }
 
 export const statusLabel: Record<Status, string> = {
   new: 'Новая', progress: 'В работе', review: 'На проверке', revision: 'На доработке', accepted: 'Принята',
