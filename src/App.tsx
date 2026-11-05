@@ -7,7 +7,7 @@ type View = 'overview' | 'objects' | 'tasks' | 'my-tasks'
 type Modal = 'object' | 'task' | null
 type TaskForm = { title: string; description: string; objectId: string; assigneeId: string }
 
-const blankTask = (objectId = ''): TaskForm => ({ title: '', description: '', objectId, assigneeId: 'u2' })
+const blankTask = (objectId = ''): TaskForm => ({ title: '', description: '', objectId, assigneeId: users.find(user => user.role === 'executor')?.id ?? '' })
 const taskWord = (count: number) => count % 10 === 1 && count % 100 !== 11 ? 'задача' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? 'задачи' : 'задач'
 const objectWord = (count: number) => count % 10 === 1 && count % 100 !== 11 ? 'объект' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 12 || count % 100 > 14) ? 'объекта' : 'объектов'
 
