@@ -50,9 +50,16 @@ function App() {
       setSessionUserId(data.session?.user.id ?? null)
       setAuthChecked(true)
     })
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setSessionUserId(session?.user.id ?? null)
       setAuthChecked(true)
+      if (event === 'SIGNED_OUT') {
+        setView('overview')
+        setSelectedObjectId(null)
+        setSelectedTaskId(null)
+        setQuery('')
+        setStatusFilter('all')
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
