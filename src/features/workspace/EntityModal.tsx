@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { users } from "../../data";
+import { Spinner } from "../../components/common";
 import type { Crm } from "./useCrm";
 
 export function EntityModal({ crm }: { crm: Crm }) {
@@ -15,12 +16,17 @@ export function EntityModal({ crm }: { crm: Crm }) {
     taskForm,
     setTaskForm,
     store,
+    pending,
   } = crm;
   if (!modal) return null;
+  const savingObject = pending === "object";
+  const savingTask = pending === "task";
+  const locked = Boolean(pending);
   return (
     <div
       className="modal-backdrop"
       onMouseDown={(event) => {
+        if (locked) return;
         if (event.target === event.currentTarget) setModal(null);
       }}
     >
@@ -49,6 +55,7 @@ export function EntityModal({ crm }: { crm: Crm }) {
             className="icon-button"
             onClick={() => setModal(null)}
             aria-label="Закрыть"
+            disabled={locked}
           >
             <X size={20} />
           </button>
@@ -60,6 +67,7 @@ export function EntityModal({ crm }: { crm: Crm }) {
               <input
                 required
                 autoFocus
+                disabled={savingObject}
                 value={objectForm.name}
                 onChange={(event) =>
                   setObjectForm({ ...objectForm, name: event.target.value })
@@ -71,6 +79,7 @@ export function EntityModal({ crm }: { crm: Crm }) {
               Адрес
               <input
                 required
+                disabled={savingObject}
                 value={objectForm.address}
                 onChange={(event) =>
                   setObjectForm({ ...objectForm, address: event.target.value })
@@ -83,11 +92,24 @@ export function EntityModal({ crm }: { crm: Crm }) {
                 type="button"
                 className="button button--ghost"
                 onClick={() => setModal(null)}
+                disabled={savingObject}
               >
                 Отмена
               </button>
-              <button className="button button--primary" type="submit">
-                {editingObjectId ? "Сохранить" : "Создать объект"}
+              <button
+                className="button button--primary"
+                type="submit"
+                disabled={savingObject}
+                aria-busy={savingObject}
+              >
+                {savingObject && <Spinner />}
+                {savingObject
+                  ? editingObjectId
+                    ? "Сохраняем…"
+                    : "Создаём…"
+                  : editingObjectId
+                    ? "Сохранить"
+                    : "Создать объект"}
               </button>
             </div>
           </form>
@@ -98,6 +120,7 @@ export function EntityModal({ crm }: { crm: Crm }) {
               <input
                 required
                 autoFocus
+                disabled={savingTask}
                 value={taskForm.title}
                 onChange={(event) =>
                   setTaskForm({ ...taskForm, title: event.target.value })
@@ -109,6 +132,7 @@ export function EntityModal({ crm }: { crm: Crm }) {
               Описание
               <textarea
                 rows={4}
+                disabled={savingTask}
                 value={taskForm.description}
                 onChange={(event) =>
                   setTaskForm({ ...taskForm, description: event.target.value })
@@ -121,6 +145,7 @@ export function EntityModal({ crm }: { crm: Crm }) {
                 Объект
                 <select
                   required
+                  disabled={savingTask}
                   value={taskForm.objectId}
                   onChange={(event) =>
                     setTaskForm({ ...taskForm, objectId: event.target.value })
@@ -137,6 +162,7 @@ export function EntityModal({ crm }: { crm: Crm }) {
                 Исполнитель
                 <select
                   required
+                  disabled={savingTask}
                   value={taskForm.assigneeId}
                   onChange={(event) =>
                     setTaskForm({ ...taskForm, assigneeId: event.target.value })
@@ -157,11 +183,24 @@ export function EntityModal({ crm }: { crm: Crm }) {
                 type="button"
                 className="button button--ghost"
                 onClick={() => setModal(null)}
+                disabled={savingTask}
               >
                 Отмена
               </button>
-              <button className="button button--primary" type="submit">
-                {editingTaskId ? "Сохранить" : "Создать задачу"}
+              <button
+                className="button button--primary"
+                type="submit"
+                disabled={savingTask}
+                aria-busy={savingTask}
+              >
+                {savingTask && <Spinner />}
+                {savingTask
+                  ? editingTaskId
+                    ? "Сохраняем…"
+                    : "Создаём…"
+                  : editingTaskId
+                    ? "Сохранить"
+                    : "Создать задачу"}
               </button>
             </div>
           </form>

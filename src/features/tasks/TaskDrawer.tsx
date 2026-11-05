@@ -1,6 +1,6 @@
 import { Check, Pencil, Trash2, X } from "lucide-react";
 import { formatDateTime, getUser, statusLabel } from "../../data";
-import { Avatar, StatusBadge } from "../../components/common";
+import { Avatar, Spinner, StatusBadge } from "../../components/common";
 import type { Crm } from "../workspace/useCrm";
 
 export function TaskDrawer({ crm }: { crm: Crm }) {
@@ -15,6 +15,7 @@ export function TaskDrawer({ crm }: { crm: Crm }) {
     transitions,
     revisionComment,
     transition,
+    pending,
   } = crm;
   if (!selectedTask) return null;
   return (
@@ -49,6 +50,7 @@ export function TaskDrawer({ crm }: { crm: Crm }) {
                   onClick={() => openTaskEdit(selectedTask)}
                   aria-label="Редактировать задачу"
                   title="Редактировать задачу"
+                  disabled={Boolean(pending)}
                 >
                   <Pencil size={18} />
                 </button>
@@ -57,8 +59,14 @@ export function TaskDrawer({ crm }: { crm: Crm }) {
                   onClick={() => deleteTask(selectedTask)}
                   aria-label="Удалить задачу"
                   title="Удалить задачу"
+                  disabled={Boolean(pending)}
+                  aria-busy={pending === "delete-task"}
                 >
-                  <Trash2 size={18} />
+                  {pending === "delete-task" ? (
+                    <Spinner size={18} />
+                  ) : (
+                    <Trash2 size={18} />
+                  )}
                 </button>
               </div>
             )}
@@ -129,21 +137,29 @@ export function TaskDrawer({ crm }: { crm: Crm }) {
                 onChange={(event) => setRevisionComment(event.target.value)}
                 placeholder="Что нужно исправить?"
                 rows={3}
+                disabled={Boolean(pending)}
               />
             </label>
           )}
           {transitions.length ? (
-            transitions.map((item) => (
-              <button
-                key={item.to}
-                className={`button ${item.primary ? "button--primary" : "button--outline"}`}
-                onClick={() => transition(selectedTask, item.to)}
-                disabled={item.to === "revision" && !revisionComment.trim()}
-              >
-                {item.primary && <Check size={17} />}
-                {item.label}
-              </button>
-            ))
+            transitions.map((item) => {
+              const saving = pending === `transition:${item.to}`;
+              return (
+                <button
+                  key={item.to}
+                  className={`button ${item.primary ? "button--primary" : "button--outline"}`}
+                  onClick={() => transition(selectedTask, item.to)}
+                  disabled={
+                    Boolean(pending) ||
+                    (item.to === "revision" && !revisionComment.trim())
+                  }
+                  aria-busy={saving}
+                >
+                  {saving ? <Spinner /> : item.primary && <Check size={17} />}
+                  {saving ? "Сохраняем…" : item.label}
+                </button>
+              );
+            })
           ) : (
             <p>Доступных действий в этом статусе нет</p>
           )}

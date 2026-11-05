@@ -1,4 +1,9 @@
-import type { Dispatch, FormEvent, SetStateAction } from "react";
+import type {
+  Dispatch,
+  FormEvent,
+  MutableRefObject,
+  SetStateAction,
+} from "react";
 import type { ObjectItem, Status, Store, Task } from "../../data";
 import {
   createObject,
@@ -27,6 +32,8 @@ type WorkspaceActionsOptions = {
   setMenuOpen: Dispatch<SetStateAction<boolean>>;
   setRevisionComment: Dispatch<SetStateAction<string>>;
   setActionError: Dispatch<SetStateAction<string>>;
+  busyRef: MutableRefObject<boolean>;
+  setPending: Dispatch<SetStateAction<string | null>>;
 };
 
 export function createWorkspaceActions({
@@ -44,16 +51,30 @@ export function createWorkspaceActions({
   setMenuOpen,
   setRevisionComment,
   setActionError,
+  busyRef,
+  setPending,
 }: WorkspaceActionsOptions) {
   function reportError(error: unknown) {
     setActionError(error instanceof Error ? error.message : String(error));
+  }
+
+  function begin(action: string) {
+    if (busyRef.current) return false;
+    busyRef.current = true;
+    setPending(action);
+    return true;
+  }
+
+  function end() {
+    busyRef.current = false;
+    setPending(null);
   }
 
   async function saveObject(event: FormEvent) {
     event.preventDefault();
     const name = objectForm.name.trim();
     const address = objectForm.address.trim();
-    if (!name || !address) return;
+    if (!name || !address || !begin("object")) return;
     try {
       if (supabase) {
         if (editingObjectId)
@@ -85,6 +106,8 @@ export function createWorkspaceActions({
       setModal(null);
     } catch (error) {
       reportError(error);
+    } finally {
+      end();
     }
   }
 
@@ -92,7 +115,8 @@ export function createWorkspaceActions({
     event.preventDefault();
     const title = taskForm.title.trim();
     const description = taskForm.description.trim();
-    if (!title || !taskForm.objectId || !taskForm.assigneeId) return;
+    if (!title || !taskForm.objectId || !taskForm.assigneeId || !begin("task"))
+      return;
     try {
       if (supabase) {
         if (editingTaskId)
@@ -155,11 +179,14 @@ export function createWorkspaceActions({
       setModal(null);
     } catch (error) {
       reportError(error);
+    } finally {
+      end();
     }
   }
 
   async function deleteTask(task: Task) {
     if (!window.confirm(`Удалить задачу «${task.title}»?`)) return;
+    if (!begin("delete-task")) return;
     try {
       if (supabase) {
         await deleteRemoteTask(task.id);
@@ -172,12 +199,15 @@ export function createWorkspaceActions({
       setSelectedTaskId(null);
     } catch (error) {
       reportError(error);
+    } finally {
+      end();
     }
   }
 
   async function deleteObject(object: ObjectItem) {
     if (!window.confirm(`Удалить объект «${object.name}» и все его задачи?`))
       return;
+    if (!begin("delete-object")) return;
     try {
       if (supabase) {
         await deleteRemoteObject(object.id);
@@ -191,11 +221,14 @@ export function createWorkspaceActions({
       setMenuOpen(false);
     } catch (error) {
       reportError(error);
+    } finally {
+      end();
     }
   }
 
   async function transition(task: Task, to: Status) {
     if (to === "revision" && !revisionComment.trim()) return;
+    if (!begin(`transition:${to}`)) return;
     try {
       if (supabase) {
         await transitionTask(task.id, to, revisionComment.trim());
@@ -230,6 +263,8 @@ export function createWorkspaceActions({
       setRevisionComment("");
     } catch (error) {
       reportError(error);
+    } finally {
+      end();
     }
   }
 

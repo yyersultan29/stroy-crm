@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import {
   ArrowDownRight,
   ArrowLeft,
@@ -17,6 +18,8 @@ import { Avatar, objectWord } from "../../components/common";
 import { ObjectList } from "../objects/ObjectList";
 import { TaskSection, TaskTable } from "../tasks/TaskLists";
 import type { Crm } from "./useCrm";
+
+const ObjectMap = lazy(() => import("../objects/ObjectMap"));
 
 export function WorkspaceView({ crm }: { crm: Crm }) {
   const {
@@ -48,6 +51,7 @@ export function WorkspaceView({ crm }: { crm: Crm }) {
     navigate,
     visibleTasks,
     filteredObjects,
+    pending,
   } = crm;
   return (
     <main className="main">
@@ -138,18 +142,32 @@ export function WorkspaceView({ crm }: { crm: Crm }) {
               <span>Создан {formatDate(selectedObject.createdAt)}</span>
               {isManager && (
                 <div className="object-meta__actions">
-                  <button onClick={() => openObjectEdit(selectedObject)}>
+                  <button
+                    onClick={() => openObjectEdit(selectedObject)}
+                    disabled={Boolean(pending)}
+                  >
                     Редактировать
                   </button>
                   <button
                     className="danger-text"
                     onClick={() => deleteObject(selectedObject)}
+                    disabled={Boolean(pending)}
+                    aria-busy={pending === "delete-object"}
                   >
-                    Удалить
+                    {pending === "delete-object" ? "Удаляем…" : "Удалить"}
                   </button>
                 </div>
               )}
             </div>
+            <Suspense
+              fallback={
+                <div className="object-map">
+                  <div className="object-map__status">Загружаем карту…</div>
+                </div>
+              }
+            >
+              <ObjectMap address={selectedObject.address} />
+            </Suspense>
             <TaskSection
               tasks={pageTasks}
               title="Задачи объекта"

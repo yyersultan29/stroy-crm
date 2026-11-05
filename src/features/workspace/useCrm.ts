@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   getUser,
   users,
@@ -32,6 +32,8 @@ export function useCrm() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [actionError, setActionError] = useState("");
+  const busyRef = useRef(false);
+  const [pending, setPending] = useState<string | null>(null);
 
   const resetNavigation = useCallback(() => {
     setView("overview");
@@ -152,6 +154,8 @@ export function useCrm() {
       setMenuOpen,
       setRevisionComment,
       setActionError,
+      busyRef,
+      setPending,
     });
 
   const transitions: { to: Status; label: string; primary?: boolean }[] =
@@ -229,6 +233,7 @@ export function useCrm() {
     loadError,
     actionError,
     setActionError,
+    pending,
     currentUser,
     isManager,
     visibleTasks,

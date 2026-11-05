@@ -1,4 +1,4 @@
-import { Clock3 } from "lucide-react";
+import { Clock3, Loader2 } from "lucide-react";
 import { getUser, statusLabel, type Status } from "../data";
 
 export const taskWord = (count: number) =>
@@ -43,6 +43,10 @@ export function StatusBadge({ status }: { status: Status }) {
       {statusLabel[status]}
     </span>
   );
+}
+
+export function Spinner({ size = 16 }: { size?: number }) {
+  return <Loader2 className="spin" size={size} aria-hidden="true" />;
 }
 
 export function EmptyState({ title, text }: { title: string; text: string }) {

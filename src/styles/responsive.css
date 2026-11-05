@@ -188,6 +188,9 @@
     display: block;
     font-size: 8px;
   }
+  .object-map {
+    height: 220px;
+  }
   .object-meta {
     flex-wrap: wrap;
     gap: 9px 15px;
